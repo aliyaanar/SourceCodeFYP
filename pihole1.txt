@@ -1,0 +1,109 @@
+﻿import pytest
+from textwrap 
+import dedent 
+import re
+from .conftest import ( 
+   SETUPVARS,
+   tick_box,
+   info_box,
+   cross_box,
+   mock_command,
+   mock_command_run,
+   mock_command_2,
+   mock_command_passthrough,
+   run_script,
+)
+
+def test_supported_package_manager(host):
+  """
+confirm installer exits when no supported package manager found
+  """
+  # break supported package managers 
+  host.run("rm -rf /usr/bin/apt-get") 
+  host.run("rm -rf    /usr/bin/rpm") 
+  package_manager_detect = host.run(
+    """
+  source /opt/pihole/basic-install.sh
+  package_manager_detect
+  """
+  )
+  expected_stdout = cross_box + "No supported package manager found"
+  assert expected_stdout in package_manager_detect.stdout
+  # assert package_manager_detect.rc == 1
+
+def
+test_setupVars_are_sourced_to_global_scope(host):
+   """
+   currently update_dialogs sources setupVars with a dot,
+   then various other functions use the variables.
+   This confirms the sourced variables are in scope between functions
+   """
+   setup_var_file= "cat<<EOF>> /etc/pihole/ setupVars.conf\n"
+   for k,v in SETUPVARS.items():
+      setup_var_file += "{}={}\n".format(k,v)
+   setup_var_file += "EOF\n"
+   host.run(setup_var_file)
+
+   script = dedent(
+     """\
+   set -e
+   printSetupVars() {
+      #Currently debug test function only
+      echo "Outputting sourced variables"
+      echo "PIHOLE_INTERFACE=${PIHOLE_INTERFACE}"
+      echo "PIHOLE_DNS_1=${PIHOLE_DNS_1}"
+      echo "PIHOLE_DNS_2=${PIHOLE_DNS_2}"
+   }
+   update_dialogs(){
+     ./etc/pihole/setupVars.conf
+   }
+   update_dialogs
+   printSetupVars
+   output = run_script(host,script).stdout
+
+   for k,v in SETUPVARS.items(): assert"{}={}".format(k,v) in output
+
+def
+test_setupVars_saved_to_file(host):
+   """
+   confirm saved settings are written to a file for future updates to reuse
+   """
+   # dedent works better with this and padding matching script below
+   set_setup_vars = "\n"
+   for k, v in SETUPVARS.items():
+     set_setup_vars += " {}=}{}\n".format(k, v) 
+   host.run(set_setup_vars)
+
+   script = dedent(
+     """\
+   set -e
+   echo start
+   TERM=xterm
+   source /opt/pihole/basic-install.sh 
+   source /opt/pihole/utils.sh
+   {}
+   mkdir -p /etc/dnsmasq.d 
+   version_check_dnsmasq
+   echo "" > /etc/pihole/pihole-FTL.conf
+   finalExports
+   cat /etc/pihole/setupVars.conf
+   """.format(
+        set_setup_vars
+      )
+   )
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

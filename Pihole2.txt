@@ -1,0 +1,42 @@
+sudo apt-get update -y
+sudo apt-get upgrade -y
+sudo apt-get install curl -y
+curl -sSL https://install.pi-hole.net | bash
+
+echo 
+read -p 
+
+# Add custom blocklists
+echo "Adding custom blocklists..."
+cat <<EOL >> /etc/pihole/adlists.list
+https://edition.cnn.com/
+https://dramacool.bg/
+https://itexamanswers.net/lab-130-configuring-redundancy-using-hsrp.html
+EOL
+pihole -g
+echo "Blocklists added and gravity updated!"
+
+# Block specific websites
+echo "Creating custom DNS filter..."
+cat <<EOL >> /etc/dnsmasq.d/02-custom-dns.conf
+address=/facebook.com/0.0.0.0
+address=/instagram.com/0.0.0.0
+EOL
+pihole restartdns
+echo "Custom DNS filtering applied!"
+
+# Install and configure monitoring tools
+sudo apt-get install vnstat iftop -y
+sudo systemctl start vnstat
+sudo systemctl enable vnstat
+echo "alias monitor_traffic='vnstat -l'" >> ~/.bashrc
+echo "alias realtime_traffic='sudo iftop'" >> ~/.bashrc
+source ~/.bashrc
+echo "Monitoring tools installed and configured!"
+
+# Enable advanced DNS query logging
+sudo sed -i 's/PRIVACYLEVEL=.*/PRIVACYLEVEL=0/' /etc/pihole/pihole-FTL.conf
+pihole restartdns
+echo "Advanced DNS query logging enabled!"
+
+echo "Pi-hole setup and customization complete!"
